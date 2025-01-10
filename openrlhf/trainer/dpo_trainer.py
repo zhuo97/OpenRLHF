@@ -579,7 +579,7 @@ class VLDPOTrainer(DPOTrainer):
             loss_mean = 0
 
             #TODO: support ring attention on vision model training
-            assert self.strategy.ring_attn_group is None, f"Right attention is not supported on vision models currently"
+            assert self.strategy.ring_attn_group is None, f"Ring attention is not supported on vision models currently"
 
             # train
             for input_data in self.train_dataloader:

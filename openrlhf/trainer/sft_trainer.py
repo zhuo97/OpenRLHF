@@ -334,7 +334,7 @@ class VLSFTTrainer(SFTTrainer):
             loss_mean = 0
 
             #TODO: support ring attention on vision model training
-            assert self.strategy.ring_attn_group is None, f"Right attention is not supported on vision models currently"
+            assert self.strategy.ring_attn_group is None, f"Ring attention is not supported on vision models currently"
 
             for input_data in self.train_dataloader:
                 data = self.data_to_device(input_data)
