@@ -26,7 +26,7 @@ openrlhf.cli.train_vl_dpo \
    --apply_chat_template \
    --chosen_key chosen \
    --rejected_key rejected \
-   --flash_attn \
+   --flash_attn fa2 \
    --load_checkpoint \
    --gradient_checkpointing
 EOF

@@ -21,7 +21,7 @@ openrlhf.cli.train_vl_sft \
    --zero_stage 2 \
    --max_epochs 3 \
    --bf16 \
-   --flash_attn \
+   --flash_attn fa2 \
    --learning_rate 1e-5 \
    --lr_scheduler constant \
    --load_checkpoint 

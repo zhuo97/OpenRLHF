@@ -2,14 +2,18 @@ import os
 from abc import ABC
 
 import torch
-from flash_attn.utils.distributed import all_gather
 from torch.nn import functional as F
 from torch.optim import Optimizer
 from tqdm import tqdm
+import time
+from transformers.utils import is_flash_attn_2_available
 
 from openrlhf.models import DPOLoss
 from openrlhf.utils.distributed_sampler import DistributedSampler
 from openrlhf.utils.vision_utils import IGNORE_INDEX
+
+if is_flash_attn_2_available():
+    from flash_attn.utils.distributed import all_gather
 
 class DPOTrainer(ABC):
     """
@@ -197,7 +201,6 @@ class DPOTrainer(ABC):
                     logs_dict["nll_loss"] = nll_loss.item()
                 # step bar
                 logs_dict = self.strategy.all_reduce(logs_dict)
-                step_bar.set_postfix(logs_dict)
                 step_bar.update()
 
                 # logs/checkpoints/evaluation
@@ -223,9 +226,11 @@ class DPOTrainer(ABC):
     def save_logs_and_checkpoints(self, args, global_step, step_bar, logs_dict={}, client_states={}):
         # logs
         if global_step % args.logging_steps == 0:
+            logs = {"train/%s" % k: v for k, v in {**logs_dict, "global_step": global_step}.items()}
+            if self.strategy.is_rank_0():
+                step_bar.write(str(logs))
             # wandb
             if self._wandb is not None and self.strategy.is_rank_0():
-                logs = {"train/%s" % k: v for k, v in {**logs_dict, "global_step": global_step}.items()}
                 self._wandb.log(logs)
             # TensorBoard
             elif self._tensorboard is not None and self.strategy.is_rank_0():
@@ -595,6 +600,7 @@ class VLDPOTrainer(DPOTrainer):
 
             # train
             for input_data in self.train_dataloader:
+                start_time = time.time()
                 data = self.data_to_device(input_data)
 
                 chosen_logps, rejected_logps, aux_loss, nll_loss = self.concatenated_forward(
@@ -644,13 +650,15 @@ class VLDPOTrainer(DPOTrainer):
                     logs_dict["nll_loss"] = nll_loss.item()
                 # step bar
                 logs_dict = self.strategy.all_reduce(logs_dict)
-                step_bar.set_postfix(logs_dict)
                 step_bar.update()
+                end_time = time.time()
+                step_time = end_time - start_time
 
                 # logs/checkpoints/evaluation
                 if step % self.strategy.accumulated_gradient == 0:
                     global_step = step // self.strategy.accumulated_gradient
                     client_states = {"consumed_samples": global_step * args.train_batch_size}
+                    logs_dict["step_time"] = f"{step_time:.3f}s"
                     self.save_logs_and_checkpoints(args, global_step, step_bar, logs_dict, client_states)
 
                 step += 1
