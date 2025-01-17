@@ -4,6 +4,7 @@ from abc import ABC
 import torch
 from torch.optim import Optimizer
 from tqdm import tqdm
+import time
 from typing_extensions import override
 
 from openrlhf.models import GPTLMLoss
@@ -188,7 +189,6 @@ class SFTTrainer(ABC):
                     logs_dict["aux_loss"] = aux_loss.item()
                 # step bar
                 logs_dict = self.strategy.all_reduce(logs_dict)
-                step_bar.set_postfix(logs_dict)
                 step_bar.update()
 
                 # logs/checkpoints/evaluation
@@ -211,9 +211,11 @@ class SFTTrainer(ABC):
     # logs/checkpoints/evaluation
     def save_logs_and_checkpoints(self, args, global_step, step_bar, logs_dict={}, client_states={}):
         if global_step % args.logging_steps == 0:
+            logs = {"train/%s" % k: v for k, v in {**logs_dict, "global_step": global_step}.items()}
+            if self.strategy.is_rank_0():
+                step_bar.write(str(logs))
             # wandb
             if self._wandb is not None and self.strategy.is_rank_0():
-                logs = {"train/%s" % k: v for k, v in {**logs_dict, "global_step": global_step}.items()}
                 self._wandb.log(logs)
             # TensorBoard
             elif self._tensorboard is not None and self.strategy.is_rank_0():
@@ -348,6 +350,7 @@ class VLSFTTrainer(SFTTrainer):
             assert self.strategy.ring_attn_group is None, f"Ring attention is not supported on vision models currently"
 
             for input_data in self.train_dataloader:
+                start_time = time.time()
                 data = self.data_to_device(input_data)
                 labels = data["labels"]
 
@@ -385,13 +388,15 @@ class VLSFTTrainer(SFTTrainer):
                     logs_dict["aux_loss"] = aux_loss.item()
                 # step bar
                 logs_dict = self.strategy.all_reduce(logs_dict)
-                step_bar.set_postfix(logs_dict)
                 step_bar.update()
+                end_time = time.time()
+                step_time = end_time - start_time
 
                 # logs/checkpoints/evaluation
                 if step % self.strategy.accumulated_gradient == 0:
                     global_step = step // self.strategy.accumulated_gradient
                     client_states = {"consumed_samples": global_step * args.train_batch_size}
+                    logs_dict["step_time"] = f"{step_time:.3f}s"
                     self.save_logs_and_checkpoints(args, global_step, step_bar, logs_dict, client_states)
 
                 step += 1

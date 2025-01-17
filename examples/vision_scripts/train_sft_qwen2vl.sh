@@ -1,5 +1,8 @@
 set -x
 
+export ACLNN_CACHE_LIMIT=100000
+export COMBINED_ENABLE=1
+export TASK_QUEUE_ENABLE=2
 export HF_DATASETS_OFFLINE=1
 
 read -r -d '' training_commands <<EOF
@@ -9,7 +12,7 @@ openrlhf.cli.train_vl_sft \
    --dataset_config_path examples/vision_scripts/llava_zh_300k.json \
    --train_batch_size 8 \
    --micro_train_batch_size 1 \
-   --max_samples 2000 \
+   --max_samples 6000 \
    --processing_num_workers 16 \
    --overwrite_cache True \
    --model_arch qwen2_vl \
@@ -17,14 +20,13 @@ openrlhf.cli.train_vl_sft \
    --save_path ./checkpoint/qwen2vl \
    --save_steps -1 \
    --logging_steps 1 \
-   --eval_steps 50 \
+   --eval_steps -1 \
    --zero_stage 2 \
    --max_epochs 3 \
    --bf16 \
-   --flash_attn \
+   --flash_attn sdpa \
    --learning_rate 1e-5 \
-   --lr_scheduler constant \
-   --load_checkpoint 
+   --lr_scheduler constant
 EOF
 
 #    --use_wandb True of wandb tokens \

@@ -52,7 +52,12 @@ class Actor(nn.Module):
         super().__init__()
 
         if isinstance(pretrain_or_model, str):
-            attn_implementation = "flash_attention_2" if use_flash_attention_2 else "eager"
+            if use_flash_attention_2 == "fa2":
+                attn_implementation = "flash_attention_2"
+            elif use_flash_attention_2 == "sdpa":
+                attn_implementation = "sdpa"
+            else:
+                attn_implementation = "eager"
 
             # Note: dschf is defined in function scope to avoid global effects
             # https://huggingface.co/docs/transformers/deepspeed#non-trainer-deepspeed-integration
