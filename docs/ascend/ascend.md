@@ -16,7 +16,7 @@
 | torch_npu | 见 [支持的算法](#支持的算法) |
 | CANN      | 见 [支持的算法](#支持的算法) |
 
-> vLLM + Ray 版本在 CANN 8.1.RC1 上进行测试，该版本通常预计在三月底正式发布。  
+> vLLM + Ray 版本在 CANN 8.1.RC1 上进行测试，该版本尚未正式发布。  
 > 为了保证能够正常使用 vLLM，我们建议配套软件的安装遵循 vllm-ascend 的[安装教程](https://vllm-ascend.readthedocs.io/en/latest/installation.html)。
 
 ### vLLM
@@ -36,8 +36,6 @@ cd vllm-ascend
 pip install -e .
 ```
 
-> 当前设置 vllm tp>1 报错，正在修复中。 
-
 ### 源码安装
 
 ```shell
@@ -51,7 +49,10 @@ TARGET_DEVICE=NPU pip install -e .
 可通过如下方式在华为昇腾设备上启动 Ray:
 ```shell
 # launch the master node of ray in container
-ray start --head --node-ip-address 0.0.0.0
+ray start --head --port 6379
+
+# if you want to launch ray on more nodes, use
+ray start --address='MASTER-NODE-ADDRESS:6379'
 ```
 
 训练脚本提交方式与英伟达 GPU 相同。
@@ -88,7 +89,7 @@ ray start --head --node-ip-address 0.0.0.0
 | Iterative DPO          | 即将开展   |           |            |                              |                             |                                                              |
 | PPO                    | 精度测试中 |           | 2.5.1      | 2.5.1rc1<br />(Not Released) | 8.1.RC1<br />(Not Released) |                                                              |
 | REINFORCE++            | 等待发布   | 1.94%     | 2.5.1      | 2.5.1rc1<br />(Not Released) | 8.1.RC1<br />(Not Released) | [测试结果](https://github.com/OpenRLHF/OpenRLHF/pull/605#issuecomment-2735138695) |
-| GRPO                   | 精度测试中 |           | 2.5.1      | 2.5.1rc1<br />(Not Released) | 8.1.RC1<br />(Not Released) |                                                              |
+| GRPO                   | 等待发布   | 0.61%     | 2.5.1      | 2.5.1rc1<br />(Not Released) | 8.1.RC1<br />(Not Released) | [测试结果](https://github.com/OpenRLHF/OpenRLHF/pull/605#issuecomment-2764993841) |
 | RLOO                   | 即将开展   |           |            |                              |                             |                                                              |
 | REINFORCE Baseline     | 即将开展   |           |            |                              |                             |                                                              |
 | Rejection  Sampling    | 即将开展   |           |            |                              |                             |                                                              |
@@ -97,8 +98,9 @@ ray start --head --node-ip-address 0.0.0.0
 | Continue Pretrain      | 即将开展   |           |            |                              |                             |                                                              |
 
 **补充说明**：
-1. 已支持算法的配套版本参考上表提供的版本进行使用，可大于等于提供的版本。  
+1. 已支持的算法仅在上表提供的版本进行过测试，可参考上表提供的版本进行使用，`Not Released` 表示尚未正式发布。  
 2. 由于 `flash_attn` 第三方库不支持华为昇腾设备，在脚本中使用 `--flash_attn` 参数会使能 SDPA，通过 `torch_npu` 调用华为昇腾的 FA 算子，具体参考 [FlashAttentionScore](https://www.hiascend.com/document/detail/zh/Pytorch/600/ptmoddevg/trainingmigrguide/performance_tuning_0027.html)。  
 3. 使用 `--adam_offload` 参数可能存在长时间卡顿的情况，解决方法是删除 torch_extensions 的缓存文件，参考 [issue](https://github.com/deepspeedai/DeepSpeed/issues/2816#issuecomment-1450095538)。  
 4. 不支持 Hybrid Engine 相关功能。
 5. 不支持 `--packing_samples` 参数。
+6. 不支持 Ring Attention 功能。
