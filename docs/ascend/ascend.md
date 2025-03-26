@@ -34,9 +34,7 @@ VLLM_TARGET_DEVICE=empty pip install .
 git clone -b v0.7.3-dev https://github.com/vllm-project/vllm-ascend.git
 cd vllm-ascend
 pip install -e .
-```
-
-> 当前设置 vllm tp>1 报错，正在修复中。 
+``` 
 
 ### 源码安装
 
@@ -51,7 +49,10 @@ TARGET_DEVICE=NPU pip install -e .
 可通过如下方式在华为昇腾设备上启动 Ray:
 ```shell
 # launch the master node of ray in container
-ray start --head --node-ip-address 0.0.0.0
+ray start --head --port 6379
+
+# if you want to launch ray on more nodes, use
+ray start --address='MASTER-NODE-ADDRESS:6379'
 ```
 
 训练脚本提交方式与英伟达 GPU 相同。
@@ -102,3 +103,4 @@ ray start --head --node-ip-address 0.0.0.0
 3. 使用 `--adam_offload` 参数可能存在长时间卡顿的情况，解决方法是删除 torch_extensions 的缓存文件，参考 [issue](https://github.com/deepspeedai/DeepSpeed/issues/2816#issuecomment-1450095538)。  
 4. 不支持 Hybrid Engine 相关功能。
 5. 不支持 `--packing_samples` 参数。
+6. 不支持 Ring Attention 功能。
