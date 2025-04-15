@@ -63,7 +63,7 @@ ray start --address='MASTER-NODE-ADDRESS:6379'
 | --------------- | ---------------- |
 | flash_attn      | 不支持           |
 | ring_flash_attn | 不支持           |
-| bitsandbytes    | 部分支持，待验证 |
+| bitsandbytes    | 不支持           |
 
 ## 支持的算法
 
@@ -99,8 +99,6 @@ ray start --address='MASTER-NODE-ADDRESS:6379'
 
 **补充说明**：
 1. 已支持的算法仅在上表提供的版本进行过测试，可参考上表提供的版本进行使用，`Not Released` 表示尚未正式发布。  
-2. 由于 `flash_attn` 第三方库不支持华为昇腾设备，在脚本中使用 `--flash_attn` 参数会使能 SDPA，通过 `torch_npu` 调用华为昇腾的 FA 算子，具体参考 [FlashAttentionScore](https://www.hiascend.com/document/detail/zh/Pytorch/600/ptmoddevg/trainingmigrguide/performance_tuning_0027.html)。  
-3. 使用 `--adam_offload` 参数可能存在长时间卡顿的情况，解决方法是删除 torch_extensions 的缓存文件，参考 [issue](https://github.com/deepspeedai/DeepSpeed/issues/2816#issuecomment-1450095538)。  
-4. 不支持 Hybrid Engine 相关功能。
-5. 不支持 `--packing_samples` 参数。
-6. 不支持 Ring Attention 功能。
+2. 使用 `--adam_offload` 参数可能存在长时间卡顿的情况，解决方法是删除 torch_extensions 的缓存文件，参考 [issue](https://github.com/deepspeedai/DeepSpeed/issues/2816#issuecomment-1450095538)。  
+3. 不支持 Hybrid Engine 相关功能。
+4. 不支持 Ring Attention 功能。

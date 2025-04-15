@@ -10,7 +10,6 @@ from transformers import AutoModelForCausalLM, BitsAndBytesConfig
 from transformers.integrations.deepspeed import HfDeepSpeedConfig
 from transformers.utils import is_flash_attn_2_available
 
-from openrlhf import IS_NPU_AVAILABLE
 from .ring_attn_utils import convert_ring_attn_params
 from .utils import log_probs_from_logits, reset_position_ids
 
@@ -62,8 +61,6 @@ class Actor(nn.Module):
 
         if isinstance(pretrain_or_model, str):
             attn_implementation = "flash_attention_2" if use_flash_attention_2 else "eager"
-            if IS_NPU_AVAILABLE:
-                attn_implementation = "sdpa" if use_flash_attention_2 else "eager"
 
             # Note: dschf is defined in function scope to avoid global effects
             # https://huggingface.co/docs/transformers/deepspeed#non-trainer-deepspeed-integration
