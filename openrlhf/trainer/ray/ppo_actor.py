@@ -19,7 +19,7 @@ from openrlhf.utils import blending_datasets, get_tokenizer
 from openrlhf.utils.deepspeed import DeepspeedStrategy
 from openrlhf.utils.deepspeed.deepspeed_utils import offload_deepspeed_states, reload_deepspeed_states
 from openrlhf.utils.distributed_util import init_process_group
-from openrlhf import IS_NPU_AVAILABLE
+from openrlhf import ACCELERATOR_TYPE
 
 from .launcher import BasePPORole
 from .utils import get_physical_gpu_id
@@ -60,8 +60,9 @@ class ActorPPOTrainer(PPOTrainer):
             packing_samples=self.strategy.args.packing_samples,
         )
 
-        backend = getattr(self.strategy.args, "vllm_sync_backend", "nccl")
-        if IS_NPU_AVAILABLE:
+        if ACCELERATOR_TYPE == "GPU":
+            backend = getattr(self.strategy.args, "vllm_sync_backend", "nccl")
+        elif ACCELERATOR_TYPE == "NPU":
             backend = "hccl"
 
         self.use_cuda_ipc = False
