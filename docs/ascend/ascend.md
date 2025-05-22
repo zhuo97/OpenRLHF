@@ -66,10 +66,6 @@ cd OpenRLHF
 TARGET_DEVICE=NPU pip install -e .
 ```
 
-### Transformers
-
-当前在 Ascend NPU 进行使用时，可能存在 CPU Memory 不足的情况。该问题已经修复（[PR](https://github.com/huggingface/transformers/pull/37698)），但是 transformers `4.51.4` 版本尚未发布。因此，如果在使用过程中遇到该问题，可以源码编译安装 transformers 库。当 transformers `4.51.4` 版本发布后，我们会第一时间更新 Ascend NPU 的 requirements。
-
 ### Ray
 
 可通过如下方式在华为昇腾设备上启动 Ray:
