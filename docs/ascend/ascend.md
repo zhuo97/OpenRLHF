@@ -34,14 +34,19 @@
     <td>2.5.1</td>
   </tr>
   <tr>
-    <th align="left">CANN 版本 (参考vllm-ascend)</th>
-    <td><a href="https://github.com/vllm-project/vllm-ascend/blob/v0.7.3/docs/source/installation.md?plain=1#L72-L96">CANN 8.1.RC1</a></td>
+    <th align="left">CANN 版本</th>
+    <td><a href="https://www.hiascend.com/developer/download/community/result?module=cann&cann=8.1.RC1.beta1">CANN 8.1.RC1</a></td>
+  </tr>
+  <tr>
+    <th align="left">驱动和固件版本</th>
+    <td><a href="https://www.hiascend.com/hardware/firmware-drivers/commercial?product=4&model=26">Ascend HDK 25.0.RC1.1</a></td>
   </tr>
   <tr>
     <th align="left">不支持功能</th>
     <td>Ring Attention</br>Hybrid Engine</br>Pytorch Compile</br>bitsandbytes</td>
   </tr>
 </table>
+
 
 ### vLLM
 
