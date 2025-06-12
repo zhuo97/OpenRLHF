@@ -7,6 +7,7 @@ from ray.util.placement_group import placement_group
 from ray.util.scheduling_strategies import PlacementGroupSchedulingStrategy
 
 from openrlhf.utils.logging_utils import init_logger
+from openrlhf import ACCELERATOR_TYPE
 
 from .utils import get_bundle_indices, ray_noset_visible_devices
 
@@ -35,7 +36,8 @@ class BaseLLMRayActor:
             # We need to set CUDA_VISIBLE_DEVICES to the ray assigned GPU
             # when the distributed_executor_backend is not ray and
             # RAY_EXPERIMENTAL_NOSET_*_VISIBLE_DEVICES is set.
-            os.environ["CUDA_VISIBLE_DEVICES"] = str(ray.get_gpu_ids()[0])
+            if ACCELERATOR_TYPE == "GPU":
+                os.environ["CUDA_VISIBLE_DEVICES"] = str(ray.get_gpu_ids()[0])
 
         num_gpus = kwargs.pop("num_gpus")
         if bundle_indices is not None:
@@ -123,7 +125,10 @@ def create_vllm_engines(
     assert vllm.__version__ > "0.8.2", "OpenRLHF only supports vllm > 0.8.2"
 
     vllm_engines = []
-    distributed_executor_backend = "uni" if tensor_parallel_size == 1 else "ray"
+    if ACCELERATOR_TYPE == "GPU":
+        distributed_executor_backend = "uni" if tensor_parallel_size == 1 else "ray"
+    elif ACCELERATOR_TYPE == "NPU":
+        distributed_executor_backend = "uni" if tensor_parallel_size == 1 else "mp"
     use_hybrid_engine = shared_pg is not None
     num_gpus = int(tensor_parallel_size == 1)
     if use_hybrid_engine and tensor_parallel_size == 1:
@@ -131,15 +136,15 @@ def create_vllm_engines(
         # 2 instances on the same GPUs.
         num_gpus = 0.2
 
-    if not use_hybrid_engine:
+    if not use_hybrid_engine and ACCELERATOR_TYPE == "GPU":
         # Create a big placement group to ensure that all engines are packed
-        bundles = [{"GPU": 1, "CPU": 1} for _ in range(num_engines * tensor_parallel_size)]
+        bundles = [{ACCELERATOR_TYPE: 1, "CPU": 1} for _ in range(num_engines * tensor_parallel_size)]
         shared_pg = placement_group(bundles, strategy="PACK")
         ray.get(shared_pg.ready())
 
     for i in range(num_engines):
         bundle_indices = None
-        if tensor_parallel_size > 1:
+        if ACCELERATOR_TYPE == "GPU" and tensor_parallel_size > 1:
             bundle_indices = get_bundle_indices(shared_pg, i, tensor_parallel_size)
 
         scheduling_strategy = PlacementGroupSchedulingStrategy(
@@ -151,8 +156,9 @@ def create_vllm_engines(
         vllm_engines.append(
             llm_actor_cls.options(
                 num_cpus=num_gpus,
-                num_gpus=num_gpus,
-                scheduling_strategy=scheduling_strategy,
+                num_gpus=num_gpus if ACCELERATOR_TYPE == "GPU" else 0,
+                resources=None if ACCELERATOR_TYPE =="GPU" else {ACCELERATOR_TYPE: tensor_parallel_size},
+                scheduling_strategy=scheduling_strategy if ACCELERATOR_TYPE == "GPU" else None,
             ).remote(
                 model=pretrain,
                 enforce_eager=enforce_eager,
@@ -166,7 +172,7 @@ def create_vllm_engines(
                 trust_remote_code=True,
                 full_determinism=full_determinism,
                 gpu_memory_utilization=gpu_memory_utilization,
-                bundle_indices=bundle_indices,
+                bundle_indices=bundle_indices if ACCELERATOR_TYPE == "GPU" else None,
                 num_gpus=0.2 if use_hybrid_engine else 1,
                 enable_sleep_mode=vllm_enable_sleep,
                 agent_func_path=agent_func_path,
