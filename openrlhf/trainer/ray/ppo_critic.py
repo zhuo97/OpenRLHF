@@ -142,7 +142,7 @@ class CriticPPOTrainer(ABC):
         return status
 
 
-@ray.remote(num_gpus=1)
+@ray.remote
 class CriticModelActor(BaseModelActor):
     def init_model_from_pretrained(self, strategy: DeepspeedStrategy, pretrain, max_steps):
         args = strategy.args

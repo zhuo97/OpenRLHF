@@ -7,6 +7,7 @@ from ray.util.placement_group import placement_group
 from ray.util.scheduling_strategies import PlacementGroupSchedulingStrategy
 
 from openrlhf.utils.logging_utils import init_logger
+from openrlhf import ACCELERATOR_TYPE
 
 from .utils import get_bundle_indices, ray_noset_visible_devices
 
@@ -31,11 +32,15 @@ class BaseLLMRayActor:
             os.environ.pop("CUDA_VISIBLE_DEVICES", None)
             os.environ.pop("ROCR_VISIBLE_DEVICES", None)
             os.environ.pop("HIP_VISIBLE_DEVICES", None)
+            os.environ.pop("ASCEND_RT_VISIBLE_DEVICES", None)
         elif noset_visible_devices:
             # We need to set CUDA_VISIBLE_DEVICES to the ray assigned GPU
             # when the distributed_executor_backend is not ray and
             # RAY_EXPERIMENTAL_NOSET_*_VISIBLE_DEVICES is set.
-            os.environ["CUDA_VISIBLE_DEVICES"] = str(ray.get_gpu_ids()[0])
+            if ACCELERATOR_TYPE == "GPU":
+                os.environ["CUDA_VISIBLE_DEVICES"] = str(ray.get_gpu_ids()[0])
+            elif ACCELERATOR_TYPE == "NPU":
+                os.environ["ASCEND_RT_VISIBLE_DEVICES"] = str(ray.get_runtime_context().get_accelerator_ids()[ACCELERATOR_TYPE][0])
 
         num_gpus = kwargs.pop("num_gpus")
         if bundle_indices is not None:
@@ -138,7 +143,7 @@ def create_vllm_engines(
 
     if not use_hybrid_engine:
         # Create a big placement group to ensure that all engines are packed
-        bundles = [{"GPU": 1, "CPU": 1} for _ in range(num_engines * tensor_parallel_size)]
+        bundles = [{ACCELERATOR_TYPE: 1, "CPU": 1} for _ in range(num_engines * tensor_parallel_size)]
         shared_pg = placement_group(bundles, strategy="PACK")
         ray.get(shared_pg.ready())
 
@@ -156,7 +161,8 @@ def create_vllm_engines(
         vllm_engines.append(
             llm_actor_cls.options(
                 num_cpus=num_gpus,
-                num_gpus=num_gpus,
+                num_gpus=num_gpus if ACCELERATOR_TYPE == "GPU" else 0,
+                resources=None if ACCELERATOR_TYPE == "GPU" else {ACCELERATOR_TYPE: num_gpus},
                 scheduling_strategy=scheduling_strategy,
             ).remote(
                 model=pretrain,

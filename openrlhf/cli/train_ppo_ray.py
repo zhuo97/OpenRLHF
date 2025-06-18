@@ -13,6 +13,7 @@ from openrlhf.trainer.ray.launcher import (
 from openrlhf.trainer.ray.ppo_actor import PolicyModelActor
 from openrlhf.trainer.ray.ppo_critic import CriticModelActor
 from openrlhf.utils import get_strategy
+from openrlhf import ACCELERATOR_TYPE
 
 
 def train(args):
@@ -34,7 +35,7 @@ def train(args):
                 and args.actor_num_gpus_per_node == args.ref_num_gpus_per_node
             ), f"num_nodes and num_gpus_per_node must be the same when colocate actor and ref model."
 
-        bundles = [{"GPU": 1, "CPU": 1} for _ in range(args.actor_num_nodes * args.actor_num_gpus_per_node)]
+        bundles = [{ACCELERATOR_TYPE: 1, "CPU": 1} for _ in range(args.actor_num_nodes * args.actor_num_gpus_per_node)]
         pg = placement_group(bundles, strategy="PACK")
         ray.get(pg.ready())
 
@@ -104,7 +105,7 @@ def train(args):
             and args.critic_num_gpus_per_node == args.reward_num_gpus_per_node
         ), f"num_nodes and num_gpus_per_node must be the same when colocate critic and reward model."
 
-        bundles = [{"GPU": 1, "CPU": 1} for _ in range(args.critic_num_nodes * args.critic_num_gpus_per_node)]
+        bundles = [{ACCELERATOR_TYPE: 1, "CPU": 1} for _ in range(args.critic_num_nodes * args.critic_num_gpus_per_node)]
         pg = placement_group(bundles, strategy="PACK")
         ray.get(pg.ready())
 
@@ -184,6 +185,9 @@ def train(args):
 
     if args.critic_pretrain and args.save_value_network:
         ray.get(critic_model.async_save_model())
+    
+    # temp solution: Avoid main process disappeared error on Ascend NPU
+    ray.shutdown()
 
 
 if __name__ == "__main__":
